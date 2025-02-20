@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulateur de Droits de Succession</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .item-list {
+            margin: 20px 0;
+        }
+        .item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .item button {
+            margin-left: 10px;
+        }
+        .total {
+            font-weight: bold;
+            margin-top: 20px;
+            font-size: 1.1em;
+        }
+        .detail-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f5f5f5;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select {
+            margin-bottom: 15px;
+            padding: 5px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .remove-btn {
+            background-color: #f44336;
+        }
+        .remove-btn:hover {
+            background-color: #da190b;
+        }
+        .edit-btn {
+            background-color: #2196F3;
+        }
+        .edit-btn:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simulateur de Droits de Succession 2025</h1>
+
+    <div class="section">
+        <h2>Ajout d'éléments de succession</h2>
+        <div>
+            <label for="item-nom">Nom de l'élément :</label>
+            <input type="text" id="item-nom" required>
+            
+            <label for="item-montant">Montant (€) :</label>
+            <input type="number" id="item-montant" required>
+            
+            <button onclick="ajouterItem()">Ajouter</button>
+        </div>
+
+        <div id="items-list" class="item-list"></div>
+        
+        <div class="total" id="total-succession"></div>
+    </div>
+
+    <div class="section">
+        <h2>Paramètres de succession</h2>
+        <label for="lien">Lien de parenté avec le défunt :</label>
+        <select id="lien" required>
+            <option value="enfant">Enfant</option>
+            <option value="petit-enfant">Petit-enfant</option>
+            <option value="frere-soeur">Frère ou sœur</option>
+            <option value="neveu-niece">Neveu ou nièce</option>
+            <option value="autre">Autre</option>
+        </select>
+
+        <button onclick="calculerDroits()">Calculer les droits</button>
+    </div>
+
+    <div id="resultat-detail" class="section">
+        <h2>Résultats détaillés</h2>
+        <div id="detail-calcul"></div>
+        <div id="frais-notaire"></div>
+        <div id="total-global"></div>
+    </div>
+
+    <script>
+        let items = [];
+
+        function ajouterItem() {
+            const nom = document.getElementById('item-nom').value;
+            const montant = parseFloat(document.getElementById('item-montant').value);
+            
+            if (nom && montant) {
+                items.push({ nom, montant });
+                actualiserListeItems();
+                document.getElementById('item-nom').value = '';
+                document.getElementById('item-montant').value = '';
+            }
+        }
+
+        function supprimerItem(index) {
+            items.splice(index, 1);
+            actualiserListeItems();
+        }
+
+        function modifierItem(index) {
+            const item = items[index];
+            document.getElementById('item-nom').value = item.nom;
+            document.getElementById('item-montant').value = item.montant;
+            supprimerItem(index);
+        }
+
+        function actualiserListeItems() {
+            const liste = document.getElementById('items-list');
+            const total = items.reduce((sum, item) => sum + item.montant, 0);
+            
+            liste.innerHTML = items.map((item, index) => `
+                <div class="item">
+                    <span>${item.nom}: ${item.montant.toLocaleString()} €</span>
+                    <button class="edit-btn" onclick="modifierItem(${index})">Modifier</button>
+                    <button class="remove-btn" onclick="supprimerItem(${index})">Supprimer</button>
+                </div>
+            `).join('');
+
+            document.getElementById('total-succession').innerHTML = 
+                `Total de la succession : ${total.toLocaleString()} €`;
+        }
+
+        function calculerFraisNotaire(montantTotal) {
+            // Calcul simplifié des frais de notaire
+            const notoriete = 170;
+            const declarationSuccession = Math.min(2300, montantTotal * 0.01);
+            const attestationImmo = Math.min(3000, montantTotal * 0.015);
+            
+            return {
+                notoriete,
+                declarationSuccession,
+                attestationImmo,
+                total: notoriete + declarationSuccession + attestationImmo
+            };
+        }
+
+        function calculerDroits() {
+            const montantTotal = items.reduce((sum, item) => sum + item.montant, 0);
+            const lien = document.getElementById('lien').value;
+            let abattement = 0;
+            let taux = [];
+
+            // Définir les abattements et les taux
+            switch (lien) {
+                case 'enfant':
+                    abattement = 100000;
+                    taux = [
+                        { seuil: 8072, taux: 0.05 },
+                        { seuil: 12109, taux: 0.10 },
+                        { seuil: 15932, taux: 0.15 },
+                        { seuil: 552324, taux: 0.20 },
+                        { seuil: 902838, taux: 0.30 },
+                        { seuil: 1805677, taux: 0.40 },
+                        { seuil: Infinity, taux: 0.45 }
+                    ];
+                    break;
+                case 'petit-enfant':
+                    abattement = 1594;
+                    taux = [
+                        { seuil: 8072, taux: 0.05 },
+                        { seuil: 12109, taux: 0.10 },
+                        { seuil: 15932, taux: 0.15 },
+                        { seuil: 552324, taux: 0.20 },
+                        { seuil: 902838, taux: 0.30 },
+                        { seuil: 1805677, taux: 0.40 },
+                        { seuil: Infinity, taux: 0.45 }
+                    ];
+                    break;
+                case 'frere-soeur':
+                    abattement = 15932;
+                    taux = [
+                        { seuil: 24430, taux: 0.35 },
+                        { seuil: Infinity, taux: 0.45 }
+                    ];
+                    break;
+                case 'neveu-niece':
+                    abattement = 7967;
+                    taux = [
+                        { seuil: Infinity, taux: 0.55 }
+                    ];
+                    break;
+                case 'autre':
+                    abattement = 1594;
+                    taux = [
+                        { seuil: Infinity, taux: 0.60 }
+                    ];
+                    break;
+            }
+
+            // Calcul de la part taxable
+            let partTaxable = montantTotal - abattement;
+            if (partTaxable <= 0) {
+                partTaxable = 0;
+            }
+
+            // Calcul des droits de succession
+            let droits = 0;
+            let montantRestant = partTaxable;
+
+            if (montantRestant > 0) {
+                for (let i = 0; i < taux.length; i++) {
+                    const tranche = taux[i];
+                    const plafond = tranche.seuil;
+                    const tauxImposition = tranche.taux;
+
+                    if (montantRestant > plafond) {
+                        droits += plafond * tauxImposition;
+                        montantRestant -= plafond;
+                    } else {
+                        droits += montantRestant * tauxImposition;
+                        break;
+                    }
+                }
+            }
+
+            // Calcul des frais de notaire
+            const fraisNotaire = calculerFraisNotaire(montantTotal);
+
+            // Affichage des résultats détaillés
+            document.getElementById('detail-calcul').innerHTML = `
+                <h3>Détail du calcul des droits de succession</h3>
+                <p>Montant total de la succession : ${montantTotal.toLocaleString()} €</p>
+                <p>Abattement : ${abattement.toLocaleString()} €</p>
+                <p>Part taxable : ${partTaxable.toLocaleString()} €</p>
+                <p>Droits de succession : ${droits.toLocaleString()} €</p>
+            `;
+
+            document.getElementById('frais-notaire').innerHTML = `
+                <h3>Frais de notaire</h3>
+                <p>Acte de notoriété : ${fraisNotaire.notoriete.toLocaleString()} €</p>
+                <p>Déclaration de succession : ${fraisNotaire.declarationSuccession.toLocaleString()} €</p>
+                <p>Attestation immobilière : ${fraisNotaire.attestationImmo.toLocaleString()} €</p>
+                <p>Total des frais de notaire : ${fraisNotaire.total.toLocaleString()} €</p>
+            `;
+
+            const totalGlobal = droits + fraisNotaire.total;
+            document.getElementById('total-global').innerHTML = `
+                <h3>Total à payer</h3>
+                <p class="total">Montant total à payer : ${totalGlobal.toLocaleString()} €</p>
+            `;
+        }
+    </script>
+</body>
+</html>
